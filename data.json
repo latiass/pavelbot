@@ -1,0 +1,5 @@
+{
+  "channel": 12345,
+  "token": "bot key here",
+  "streams": ["stream1", "stream2"]
+}
