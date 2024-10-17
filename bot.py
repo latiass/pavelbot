@@ -3,7 +3,7 @@ import json
 import discord
 import requests
 from discord.ext import tasks
-from discord.abc import (GuildChannel, Thread, PrivateChannel)
+from discord.abc import (GuildChannel, PrivateChannel)
 
 
 class PicartoLiveNotif(discord.Client):
@@ -14,32 +14,40 @@ class PicartoLiveNotif(discord.Client):
         }
 
     class Stream:
-        def __init__(self, username):
+        def __init__(self, username: str, options: dict):
             self.username = username
+            # Fill in our options
+            self.options = {
+                'shortname' : options.get('shortname', username),
+                'suppress_embed' : options.get('suppress_embed', False),
+                'image' : options.get('image', None)
+            }
             self.online = False
             self.posted = False
-        async def update(self, channel: GuildChannel | Thread | PrivateChannel):
-            print('hoo')
+        async def update(self, channel: GuildChannel | PrivateChannel):
             response = requests.get('https://api.picarto.tv/api/v1/channel/name/' + self.username,
                 headers = PicartoLiveNotif.headers, timeout = 10)
             rjson = response.json()
             self.online = rjson['online']
 
-            # If online, post the message
+            # If online, post the message based on options chosen
             if self.online and not self.posted:
-                await channel.send(self.username + " is now live!")
+                if self.options['image']: # Image included, so post it
+                    await channel.send(self.options['shortname'] + " is now live at https://picarto.tv/" + self.username,
+                        file=discord.File(self.options['image']), suppress_embeds=self.options['suppress_embed'])
+                else:
+                    await channel.send(self.options['shortname'] + " is now live at https://picarto.tv/" + self.username,
+                        suppress_embeds=self.options['suppress_embed'])
+                print(self.options)
                 self.posted = True
             elif not self.online:
                 self.posted = False
-
-            print(f"Online: {self.online}; posted: {self.posted}")
-
 
     def __init__(self, streams: dict, channel: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Which streams we check and info about them
-        self.streams = [self.Stream(stream) for stream in streams]
+        self.streams = [self.Stream(username, streams[username]) for username in streams.keys()]
         # ID of the channel we post messages in
         self.channel = channel
 
@@ -55,7 +63,7 @@ class PicartoLiveNotif(discord.Client):
     async def stream_alert(self):
         channel = self.get_channel(self.channel)
         for stream in self.streams:
-            stream.update(channel)
+            await stream.update(channel)
 
     @stream_alert.before_loop
     async def before_login(self):
