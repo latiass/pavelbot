@@ -1,0 +1,22 @@
+{
+    "discord_token": "your discord bot token here",
+    "users": [
+        {
+            "short_name": "Friendly name",
+            "streams": [
+                {
+                    "type": "picarto",
+                    "username": "picarto username"
+                }
+            ],
+            "notifiers": [
+                {
+                    "type": "discord",
+                    "channel": 123456,
+                    "suppress_embed": true,
+                    "notify_offline": false
+                }
+            ]
+        }
+    ]
+}
